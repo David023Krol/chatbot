@@ -1,6 +1,11 @@
 import os
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
+import google.generativeai as genai
+
+# 1. NASTAVENÍ GEMINI API - Zde vlož svůj vygenerovaný klíč
+genai.configure(api_key="AQ.Ab8RN6KOKV1jHpOnTIJ4qih8TX2jpD50evEdCu3dSMlpX_IQ_A")
+model = genai.GenerativeModel('gemini-1.5-flash')
 
 # Nastavení Flasku, aby hledal statické soubory i šablony ve stejné složce jako je app.py
 app = Flask(__name__, static_folder='.', template_folder='.')
@@ -29,13 +34,20 @@ def submit_ticket():
     if not name or not email or not subject or not message:
         return jsonify({"error": "Všechna pole jsou povinná."}), 400
 
-    reply = (
-        f"Dobrý den, {name},\n\n"
-        f"přijali jsme Váš ticket s předmětem \"{subject}\".\n"
-        f"Náš technický tým hry \"Vaříme s tátou\" Váš problém momentálně analyzuje. "
-        f"Jakmile najdeme řešení, budeme Vás kontaktovat na zadaný e-mail: {email}.\n\n"
-        f"S pozdravem,\nTým podpory"
-    )
+    # 2. SESTAVENÍ INSTRUKCE (PROMPTU) PRO AI
+    prompt = f"""
+    Jsi technická podpora pro hru "Vaříme s tátou". 
+    Hráč jménem {name} hlásí problém s předmětem: "{subject}".
+    Popis problému: {message}
+    Odpověz hráči stručně, zdvořile a zkus mu poradit. Na konci se podepiš jako "Tým podpory".
+    """
+
+    try:
+        # 3. ZÍSKÁNÍ ODPOVĚDI OD GEMINI
+        ai_response = model.generate_content(prompt)
+        reply = ai_response.text
+    except Exception as e:
+        reply = f"Omlouváme se, AI asistent je momentálně nedostupný. Chyba: {str(e)}"
 
     return jsonify({"reply": reply})
 
