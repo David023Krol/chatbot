@@ -1,5 +1,4 @@
 document.addEventListener('DOMContentLoaded', () => {
-    
     const form = document.querySelector('form');
     const submitBtn = form.querySelector('button[type="submit"]');
     const textareas = document.querySelectorAll('textarea');
@@ -9,7 +8,8 @@ document.addEventListener('DOMContentLoaded', () => {
         replyTextarea.readOnly = true;
     }
 
-    form.addEventListener('submit', (e) => {
+    // Přidáno slovo "async", aby šlo čekat na odpověď serveru
+    form.addEventListener('submit', async (e) => {
         e.preventDefault();
 
         try {
@@ -27,42 +27,43 @@ document.addEventListener('DOMContentLoaded', () => {
             const subject = subjectInput.value.trim();
             const message = messageInput.value.trim();
 
-   
             if (!name || !email || !subject || !message) {
                 throw new Error('Prosím, vyplňte smysluplně všechna pole.');
             }
 
- 
             submitBtn.textContent = 'Odesílám...';
             submitBtn.disabled = true;
             replyTextarea.style.color = 'black'; 
-            replyTextarea.value = 'Načítám odpověď serveru...';
+            replyTextarea.value = 'Analyzuji problém pomocí AI...';
 
-            setTimeout(() => {
-                try {
-                    const isNetworkError = Math.random() < 0.15; 
-                    
-                    if (isNetworkError) {
-                        throw new Error('Nepodařilo se spojit se serverem. Zkontrolujte připojení k internetu a zkuste to znovu.');
-                    }
-                    
-                    const autoReply = `Dobrý den, ${name},\n\npřijali jsme Váš ticket s předmětem "${subject}".\nNáš technický tým hry "Vaříme s tátou" Váš problém momentálně analyzuje. Jakmile najdeme řešení, budeme Vás kontaktovat na zadaný e-mail: ${email}.\n\nS pozdravem,\nTým podpory`;
-                          
-                    replyTextarea.value = autoReply;
+            // Skutečné odeslání dat na váš Python server (API)
+            const response = await fetch('/api/ticket', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    name: name,
+                    email: email,
+                    subject: subject,
+                    message: message
+                })
+            });
 
-                } catch (serverError) {
-                    replyTextarea.style.color = 'red';
-                    replyTextarea.value = `⚠️ CHYBA: ${serverError.message}`;
-                } finally {
-                    submitBtn.textContent = 'Odeslat další ticket';
-                    submitBtn.disabled = false;
-                }
-            }, 1500); 
+            const data = await response.json();
 
-        } catch (clientError) {
+            if (!response.ok) {
+                throw new Error(data.error || 'Nastala chyba při komunikaci se serverem.');
+            }
+
+            // Vypsání reálné odpovědi od Gemini
+            replyTextarea.value = data.reply;
+
+        } catch (error) {
             replyTextarea.style.color = 'red';
-            replyTextarea.value = `⚠️ CHYBA: ${clientError.message}`;
-            submitBtn.textContent = 'Odeslat ticket';
+            replyTextarea.value = `⚠️ CHYBA: ${error.message}`;
+        } finally {
+            submitBtn.textContent = 'Odeslat další ticket';
             submitBtn.disabled = false;
         }
     });
