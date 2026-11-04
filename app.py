@@ -11,7 +11,7 @@ if not api_key:
 
 # Konfigurace Gemini
 genai.configure(api_key=api_key)
-model = genai.GenerativeModel('gemini-1.5-flash-latest')
+model = genai.GenerativeModel('gemini-pro')
 
 # Nastavení Flasku, aby hledal statické soubory i šablony ve stejné složce jako je app.py
 app = Flask(__name__, static_folder='.', template_folder='.')
@@ -60,6 +60,7 @@ def submit_ticket():
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", "5000"))
     app.run(host="0.0.0.0", port=port, debug=True)
+
 
 
 
