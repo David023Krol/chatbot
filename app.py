@@ -3,6 +3,7 @@ from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 import google.generativeai as genai
 
+# Načtení API klíče z proměnných prostředí
 api_key = os.environ.get("GEMINI_API_KEY")
 
 if not api_key:
@@ -10,8 +11,8 @@ if not api_key:
 
 genai.configure(api_key=api_key)
 
-# Použití aktuálního standardního modelu
-model = genai.GenerativeModel('gemini-2.0-flash')
+# Použití plně podporovaného modelu
+model = genai.GenerativeModel('gemini-1.5-flash')
 
 app = Flask(__name__, static_folder='.', template_folder='.')
 CORS(app)
@@ -47,12 +48,7 @@ def submit_ticket():
         ai_response = model.generate_content(prompt)
         reply = ai_response.text
     except Exception as e:
-        # Pokud zadaný model selže, zjistíme přesné dostupné modely pro váš API klíč
-        try:
-            models = [m.name.replace('models/', '') for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
-            reply = f"Chyba: {str(e)}.\n\nDostupné modely pro váš klíč jsou:\n" + "\n".join(models)
-        except Exception:
-            reply = f"Omlouváme se, AI je nedostupná. Zkontrolujte, zda je API klíč z vygenerován přímo na aistudio.google.com."
+        reply = f"Omlouváme se, AI asistent je momentálně nedostupný. Chyba: {str(e)}"
 
     return jsonify({"reply": reply})
 
