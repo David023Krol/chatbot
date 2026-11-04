@@ -3,8 +3,14 @@ from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 import google.generativeai as genai
 
-# 1. NASTAVENÍ GEMINI API - Zde vlož svůj vygenerovaný klíč
-genai.configure(api_key="AQ.Ab8RN6KOKV1jHpOnTIJ4qih8TX2jpD50evEdCu3dSMlpX_IQ_A")
+# Načtení klíče z proměnných prostředí (musí se shodovat s textem v poli KEY)
+api_key = os.environ.get("GEMINI_API_KEY")
+
+if not api_key:
+    raise ValueError("Chyba: API klíč nebyl nalezen v proměnných prostředí.")
+
+# Konfigurace Gemini
+genai.configure(api_key=api_key)
 model = genai.GenerativeModel('gemini-1.5-flash')
 
 # Nastavení Flasku, aby hledal statické soubory i šablony ve stejné složce jako je app.py
@@ -54,3 +60,4 @@ def submit_ticket():
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", "5000"))
     app.run(host="0.0.0.0", port=port, debug=True)
+
