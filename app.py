@@ -3,27 +3,23 @@ from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 import google.generativeai as genai
 
-# Načtení klíče z proměnných prostředí (musí se shodovat s textem v poli KEY)
 api_key = os.environ.get("GEMINI_API_KEY")
 
 if not api_key:
     raise ValueError("Chyba: API klíč nebyl nalezen v proměnných prostředí.")
 
-# Konfigurace Gemini
 genai.configure(api_key=api_key)
-model = genai.GenerativeModel('gemini-pro')
 
-# Nastavení Flasku, aby hledal statické soubory i šablony ve stejné složce jako je app.py
+# Použití aktuálního standardního modelu
+model = genai.GenerativeModel('gemini-2.0-flash')
+
 app = Flask(__name__, static_folder='.', template_folder='.')
-
 CORS(app)
 
-# Servírování index.html na hlavní stránce
 @app.route("/")
 def home():
     return send_from_directory('.', 'index.html')
 
-# Servírování ostatních statických souborů (CSS, JS)
 @app.route('/<path:path>')
 def serve_static(path):
     return send_from_directory('.', path)
@@ -40,7 +36,6 @@ def submit_ticket():
     if not name or not email or not subject or not message:
         return jsonify({"error": "Všechna pole jsou povinná."}), 400
 
-    # 2. SESTAVENÍ INSTRUKCE (PROMPTU) PRO AI
     prompt = f"""
     Jsi technická podpora pro hru "Vaříme s tátou". 
     Hráč jménem {name} hlásí problém s předmětem: "{subject}".
@@ -49,18 +44,18 @@ def submit_ticket():
     """
 
     try:
-        # 3. ZÍSKÁNÍ ODPOVĚDI OD GEMINI
         ai_response = model.generate_content(prompt)
         reply = ai_response.text
     except Exception as e:
-        reply = f"Omlouváme se, AI asistent je momentálně nedostupný. Chyba: {str(e)}"
+        # Pokud zadaný model selže, zjistíme přesné dostupné modely pro váš API klíč
+        try:
+            models = [m.name.replace('models/', '') for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
+            reply = f"Chyba: {str(e)}.\n\nDostupné modely pro váš klíč jsou:\n" + "\n".join(models)
+        except Exception:
+            reply = f"Omlouváme se, AI je nedostupná. Zkontrolujte, zda je API klíč z vygenerován přímo na aistudio.google.com."
 
     return jsonify({"reply": reply})
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", "5000"))
     app.run(host="0.0.0.0", port=port, debug=True)
-
-
-
-
