@@ -1,11 +1,10 @@
 import os
+import time
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 from google import genai
 
-# Načtení API klíče z proměnných prostředí
 api_key = os.environ.get("GEMINI_API_KEY")
-
 if not api_key:
     raise ValueError("Chyba: API klíč nebyl nalezen v proměnných prostředí (GEMINI_API_KEY).")
 
@@ -18,6 +17,31 @@ CORS(app)
 @app.route("/")
 def home():
     return send_from_directory('.', 'index.html')
+
+
+def generate_support_reply(prompt: str) -> str:
+    models_to_try = ["gemini-2.5-flash"]
+    last_error = None
+
+    for model_name in models_to_try:
+        for attempt in range(2):
+            try:
+                response = client.models.generate_content(
+                    model=model_name,
+                    contents=prompt,
+                )
+                text = (response.text or "").strip()
+                if text:
+                    return text
+            except Exception as e:
+                last_error = e
+                msg = str(e)
+                if ("503" in msg or "UNAVAILABLE" in msg or "429" in msg) and attempt == 0:
+                    time.sleep(1.5)
+                    continue
+                break
+
+    raise last_error or RuntimeError("Nepodařilo se získat odpověď od AI.")
 
 
 @app.post("/api/ticket")
@@ -40,18 +64,11 @@ def submit_ticket():
     """.strip()
 
     try:
-        response = client.models.generate_content(
-            model="gemini-3.8-flash",
-            contents=prompt,
-        )
-        reply = (response.text or "").strip()
-        if not reply:
-            reply = "Omlouváme se, nepodařilo se vygenerovat odpověď. Tým podpory"
+        reply = generate_support_reply(prompt)
         return jsonify({"reply": reply}), 200
     except Exception as e:
-        return jsonify({
-            "error": f"AI asistent je momentálně nedostupný: {str(e)}"
-        }), 500
+        print("CHYBA V /api/ticket:", repr(e), flush=True)
+        return jsonify({"error": f"AI asistent je momentálně nedostupný: {str(e)}"}), 500
 
 
 @app.route('/<path:path>')
