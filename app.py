@@ -20,7 +20,7 @@ def home():
 
 
 def generate_support_reply(prompt: str) -> str:
-    models_to_try = ["gemini-2.5-flash"]
+    models_to_try = ["gemini-3.8-flash"]
     last_error = None
 
     for model_name in models_to_try:
