@@ -1,5 +1,7 @@
 document.addEventListener('DOMContentLoaded', () => {
     const form = document.querySelector('form');
+    if (!form) return;
+
     const submitBtn = form.querySelector('button[type="submit"]');
     const textareas = document.querySelectorAll('textarea');
     const replyTextarea = document.getElementById('answer') || textareas[1];
@@ -8,7 +10,6 @@ document.addEventListener('DOMContentLoaded', () => {
         replyTextarea.readOnly = true;
     }
 
-    // Přidáno slovo "async", aby šlo čekat na odpověď serveru
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
 
@@ -19,7 +20,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const messageInput = document.getElementById('message');
 
             if (!nameInput || !emailInput || !subjectInput || !messageInput) {
-                throw new Error('Chyba aplikace: Některá pole formuláře nebyla nalezena.');
+                throw new Error('Některá pole formuláře nebyla nalezena.');
             }
 
             const name = nameInput.value.trim();
@@ -28,43 +29,53 @@ document.addEventListener('DOMContentLoaded', () => {
             const message = messageInput.value.trim();
 
             if (!name || !email || !subject || !message) {
-                throw new Error('Prosím, vyplňte smysluplně všechna pole.');
+                throw new Error('Prosím, vyplňte všechna povinná pole.');
             }
 
-            submitBtn.textContent = 'Odesílám...';
-            submitBtn.disabled = true;
-            replyTextarea.style.color = 'black'; 
-            replyTextarea.value = 'Analyzuji problém pomocí AI...';
+            if (submitBtn) {
+                submitBtn.textContent = 'Odesílám...';
+                submitBtn.disabled = true;
+            }
 
-            // Skutečné odeslání dat na váš Python server (API)
+            if (replyTextarea) {
+                replyTextarea.style.color = '#222';
+                replyTextarea.value = 'Analyzuji problém pomocí AI...';
+            }
+
             const response = await fetch('/api/ticket', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({
-                    name: name,
-                    email: email,
-                    subject: subject,
-                    message: message
-                })
+                body: JSON.stringify({ name, email, subject, message })
             });
 
-            const data = await response.json();
-
-            if (!response.ok) {
-                throw new Error(data.error || 'Nastala chyba při komunikaci se serverem.');
+            const rawText = await response.text();
+            let data = {};
+            try {
+                data = rawText ? JSON.parse(rawText) : {};
+            } catch {
+                throw new Error(rawText || `Chyba serveru (HTTP ${response.status}).`);
             }
 
-            // Vypsání reálné odpovědi od Gemini
-            replyTextarea.value = data.reply;
+            if (!response.ok) {
+                throw new Error(data.error || `Nastala chyba při komunikaci se serverem (HTTP ${response.status}).`);
+            }
 
+            if (replyTextarea) {
+                replyTextarea.style.color = '#111';
+                replyTextarea.value = data.reply || 'Bez odpovědi.';
+            }
         } catch (error) {
-            replyTextarea.style.color = 'red';
-            replyTextarea.value = `⚠️ CHYBA: ${error.message}`;
+            if (replyTextarea) {
+                replyTextarea.style.color = '#c0392b';
+                replyTextarea.value = `⚠️ CHYBA: ${error.message}`;
+            }
         } finally {
-            submitBtn.textContent = 'Odeslat další ticket';
-            submitBtn.disabled = false;
+            if (submitBtn) {
+                submitBtn.textContent = 'Odeslat další ticket';
+                submitBtn.disabled = false;
+            }
         }
     });
 });
