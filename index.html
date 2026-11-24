@@ -11,7 +11,7 @@
     <h1>Podpora - Vaříme s tátou the game</h1>
     <h2>Napište svůj problém do ticketu</h2>
 
-    <form>
+    <form id="ticket-form">
         <label for="name">Jméno</label>
         <input type="text" id="name" name="name" placeholder="Vaše uživatelské jméno" required>
 
@@ -26,12 +26,10 @@
 
         <button type="submit">Odeslat ticket</button>
 
-        <label for="answer">odpověd podpory</label>
-        <textarea id="answer" name="message" rows="6" placeholder="Odpověď podpory..." required></textarea>
+        <label for="answer">Odpověď podpory</label>
+        <textarea id="answer" name="answer" rows="6" placeholder="Odpověď podpory..." readonly></textarea>
     </form>
 
+    <script src="script.js"></script>
 </body>
-<script src="script.js"></script>
 </html>
-
-
